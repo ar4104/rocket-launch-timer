@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Таймер обратного отсчёта запуска ракеты</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    .container {
+      background: rgba(30, 41, 59, 0.85);
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 600px;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+      text-align: center;
+    }
+    .digit-img {
+      width: 60px;
+      height: 60px;
+      margin: 0.5rem;
+      animation: popIn 0.5s ease forwards;
+    }
+    @keyframes popIn {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    .fade-in {
+      animation: fadeInText 1s ease forwards;
+    }
+    @keyframes fadeInText {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-3xl font-bold mb-4">Таймер обратного отсчёта запуска ракеты</h1>
+    <p class="mb-6 text-lg">
+      Информационный блок: запуск ракеты произойдет через заданное время.
+    </p>
+
+    <div id="countdown" class="text-5xl font-extrabold mb-4">Введите время и нажмите старт</div>
+    <div id="launch-message" class="text-2xl font-semibold text-green-400 mb-6"></div>
+
+    <div id="digit-display" class="flex justify-center mb-6"></div>
+
+    <div class="mb-4">
+      <label for="time-input" class="block mb-2 text-lg font-medium">Введите время (секунд):</label>
+      <input
+        id="time-input"
+        type="number"
+        min="1"
+        class="w-full p-2 rounded border border-gray-300 text-black"
+        placeholder="Например, 10"
+      />
+    </div>
+
+    <button
+      id="start-stop-btn"
+      class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition-colors duration-300"
+    >
+      Старт
+    </button>
+  </div>
+
+  <script>
+    // Constants
+    const digitIntervalSeconds = 2; // n seconds between digit displays
+    const digitIterations = 5; // number of digit iterations
+
+    // Map digits to image URLs (using public domain or free icons)
+    const digitImages = new Map([
+      [0, 'https://upload.wikimedia.org/wikipedia/commons/2/2c/0_digit.svg'],
+      [1, 'https://upload.wikimedia.org/wikipedia/commons/8/88/1_digit.svg'],
+      [2, 'https://upload.wikimedia.org/wikipedia/commons/3/3a/2_digit.svg'],
+      [3, 'https://upload.wikimedia.org/wikipedia/commons/2/2e/3_digit.svg'],
+      [4, 'https://upload.wikimedia.org/wikipedia/commons/6/6b/4_digit.svg'],
+      [5, 'https://upload.wikimedia.org/wikipedia/commons/8/8e/5_digit.svg'],
+      [6, 'https://upload.wikimedia.org/wikipedia/commons/2/2d/6_digit.svg'],
+      [7, 'https://upload.wikimedia.org/wikipedia/commons/8/8a/7_digit.svg'],
+      [8, 'https://upload.wikimedia.org/wikipedia/commons/6/6f/8_digit.svg'],
+      [9, 'https://upload.wikimedia.org/wikipedia/commons/2/27/9_digit.svg'],
+    ]);
+
+    // Elements
+    const countdownEl = document.getElementById('countdown');
+    const launchMessageEl = document.getElementById('launch-message');
+    const digitDisplayEl = document.getElementById('digit-display');
+    const timeInputEl = document.getElementById('time-input');
+    const startStopBtn = document.getElementById('start-stop-btn');
+
+    let countdownTime = 0;
+    let countdownTimerId = null;
+    let digitTimerId = null;
+    let digitCount = 0;
+    let isRunning = false;
+
+    function updateCountdownDisplay(time) {
+      countdownEl.textContent = `До запуска: ${time} сек.`;
+    }
+
+    function showLaunchMessage() {
+      launchMessageEl.textContent = 'Запуск ракеты начался!';
+      launchMessageEl.classList.add('fade-in');
+    }
+
+    function clearLaunchMessage() {
+      launchMessageEl.textContent = '';
+      launchMessageEl.classList.remove('fade-in');
+    }
+
+    function showDigit(digit) {
+      const img = document.createElement('img');
+      img.src = digitImages.get(digit);
+      img.alt = `Цифра ${digit}`;
+      img.className = 'digit-img';
+      digitDisplayEl.appendChild(img);
+
+      // Remove the image after 1.5 seconds
+      setTimeout(() => {
+        img.remove();
+      }, 1500);
+    }
+
+    function startDigitDisplay() {
+      digitCount = 0;
+      digitTimerId = setInterval(() => {
+        if (digitCount >= digitIterations) {
+          clearInterval(digitTimerId);
+          return;
+        }
+        // Show digit corresponding to digitCount (mod 10)
+        showDigit(digitCount % 10);
+        digitCount++;
+      }, digitIntervalSeconds * 1000);
+    }
+
+    function startCountdown() {
+      if (countdownTime <= 0) {
+        alert('Введите положительное время для запуска.');
+        return;
+      }
+      isRunning = true;
+      startStopBtn.textContent = 'Стоп';
+      clearLaunchMessage();
+      digitDisplayEl.innerHTML = '';
+      updateCountdownDisplay(countdownTime);
+
+      countdownTimerId = setInterval(() => {
+        countdownTime--;
+        if (countdownTime <= 0) {
+          clearInterval(countdownTimerId);
+          updateCountdownDisplay(0);
+          showLaunchMessage();
+          startDigitDisplay();
+          isRunning = false;
+          startStopBtn.textContent = 'Старт';
+        } else {
+          updateCountdownDisplay(countdownTime);
+        }
+      }, 1000);
+    }
+
+    function stopCountdown() {
+      isRunning = false;
+      startStopBtn.textContent = 'Старт';
+      clearInterval(countdownTimerId);
+      clearInterval(digitTimerId);
+      countdownTimerId = null;
+      digitTimerId = null;
+      clearLaunchMessage();
+      digitDisplayEl.innerHTML = '';
+      countdownEl.textContent = 'Таймер остановлен';
+    }
+
+    startStopBtn.addEventListener('click', () => {
+      if (isRunning) {
+        stopCountdown();
+      } else {
+        const inputVal = parseInt(timeInputEl.value, 10);
+        if (isNaN(inputVal) || inputVal <= 0) {
+          alert('Пожалуйста, введите корректное положительное число для времени.');
+          return;
+        }
+        countdownTime = inputVal;
+        startCountdown();
+      }
+    });
+  </script>
+</body>
+</html>
